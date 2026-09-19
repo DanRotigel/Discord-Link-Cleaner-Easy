@@ -143,42 +143,23 @@ pip install -r requirements.txt
 
 ### Step 6: Configure the Bot
 
-The bot uses an external configuration file (`config.json`) to store your settings. This file is not tracked by git and will not be overwritten during updates, keeping your configuration safe.
+The bot reads its token only from the `DISCORD_BOT_TOKEN` environment variable. Do not put the token in `config.json`, a `.env` file, a shell startup file, or a systemd service file.
 
-**Important:** The bot will automatically create `config.json` on first run. You must run the bot at least once (even if it fails to start) to generate this file before you can edit it.
-
-1. First, run the bot to generate the configuration file:
+For a local Ubuntu/Bash session, enter the token at a hidden prompt so it is not saved in shell history:
 
 ```bash
-python3 main.py
+read -r -s -p "Discord bot token: " DISCORD_BOT_TOKEN
+printf '\n'
+export DISCORD_BOT_TOKEN
 ```
 
-The bot will fail to start (since tokens aren't set yet), but it will create `config.json` with default values. You should see a message like: "Created missing file: config.json"
+The token remains available to programs started from this terminal until you close it or run `unset DISCORD_BOT_TOKEN`. Repeat these steps in a new terminal. On a cloud host, set `DISCORD_BOT_TOKEN` using the host's secret/environment-variable settings.
 
-Press Ctrl+C to stop the bot.
+If the variable is missing or empty, DLC exits with instructions before creating configuration files or connecting to Discord.
 
-2. Now edit the configuration file:
+`config.json` stores only behavior settings and is created automatically when you start the bot with the environment variable set. You can edit those settings as described under [Configuration Options](#configuration-options).
 
-```bash
-nano config.json
-```
-
-The file will already exist with default values in JSON format. You just need to add your bot token. Find the `"bot_token"` field and replace the empty string with your actual token:
-
-```json
-{
-    "bot_token": "YOUR_DISCORD_BOT_TOKEN_HERE",
-    "mention_reply_author": true,
-    "require_links": true,
-    "regex_keys": "(?i)\\b((?:https?://|www\\.)[^\\s<>\"']+|(?:[a-z0-9-]+\\.)+[a-z]{2,}(?:/[^\\s<>\"']*)?)\\b"
-}
-```
-
-3. Replace `YOUR_DISCORD_BOT_TOKEN_HERE` with your actual bot token. You can customize any of the other settings as needed (see [Configuration Options](#configuration-options) below).
-
-4. Save the file (Ctrl+X, then Y, then Enter if using nano).
-
-**Important:** The `config.json` file is excluded from git (via `.gitignore`), so your tokens and configuration will never be overwritten by updates. The bot automatically creates this file on first run, making setup easier.
+For existing installations, `bot_token` in `config.json` is no longer used. On startup with the environment variable set, DLC removes that field without copying it into a new backup. Remove any token-bearing older backups yourself; existing backup files are not changed.
 
 ### Step 7: Test the Bot
 
@@ -216,6 +197,7 @@ Type=simple
 User=your-username
 WorkingDirectory=/path/to/Discord-Link-Cleaner
 Environment="PATH=/path/to/Discord-Link-Cleaner/venv/bin"
+PassEnvironment=DISCORD_BOT_TOKEN
 ExecStart=/path/to/Discord-Link-Cleaner/venv/bin/python3 /path/to/Discord-Link-Cleaner/main.py
 Restart=always
 RestartSec=10
@@ -230,7 +212,15 @@ Replace:
 
 Save the file (Ctrl+X, then Y, then Enter if using nano).
 
-3. Reload systemd and start the service:
+3. From the terminal where you set `DISCORD_BOT_TOKEN`, pass it to systemd's in-memory environment, then start the service:
+
+```bash
+sudo --preserve-env=DISCORD_BOT_TOKEN systemctl import-environment DISCORD_BOT_TOKEN
+```
+
+This requires sudo permission to preserve that variable. The token is not written into the service file. After a reboot, re-enter the token using Step 6, repeat the import above, and restart the service; it cannot start successfully until the token is supplied again.
+
+Reload systemd and start the service:
 
 ```bash
 sudo systemctl daemon-reload
@@ -270,15 +260,15 @@ The bot will only process messages that contain URLs (if `require_links` is set 
 
 You can customize the bot behavior by editing the variables in your `config.json` file. The bot will automatically create this file with default values on first run if it doesn't exist.
 
-**Important:** You must run the bot at least once (even if it fails to start due to missing tokens) to generate the `config.json` file. After it's created, you can edit it with your credentials and restart the bot.
+**Important:** Set `DISCORD_BOT_TOKEN` before the first run. Once `config.json` is created, you can edit behavior settings and restart the bot. Keep the token out of this file.
 
 ### Required Configuration
 
-**`bot_token`** (string, required)
+**`DISCORD_BOT_TOKEN`** (environment variable, required)
 - Your Discord bot token obtained from the Discord Developer Portal
 - Get your token at: https://discord.com/developers/applications
 - This is required for the bot to connect to Discord
-- Example in `config.json`: `"bot_token": "YOUR_DISCORD_BOT_TOKEN_HERE"`
+- Set it using the hidden prompt in [Step 6](#step-6-configure-the-bot) or your cloud host's secret settings. Restart the bot after changing it.
 
 ### Bot Behavior Settings
 
@@ -336,7 +326,7 @@ You can customize `trackers.json` to add or remove tracking parameters as needed
 ### Configuration File Details
 
 The configuration files:
-- `config.json`: Contains bot token and behavior settings
+- `config.json`: Contains behavior settings only; the token comes from `DISCORD_BOT_TOKEN`
 - `trackers.json`: Contains the list of tracking parameters to remove
 
 Both files:
@@ -346,7 +336,7 @@ Both files:
 - Can be edited at any time - changes take effect after restarting the bot
 - Are automatically validated and cleaned on startup
 
-**First-time setup:** Run the bot once with `python3 main.py` (it will fail to start without tokens, but this creates the config files). Then edit `config.json` with your bot token and restart the bot.
+**First-time setup:** Set `DISCORD_BOT_TOKEN` as described in Step 6, then run `python3 main.py`. The bot creates its configuration files automatically.
 
 ## Updating the Bot
 
@@ -464,7 +454,7 @@ rm -rf Discord-Link-Cleaner
 ### Bot crashes or stops running
 
 - Check systemd logs: `sudo journalctl -u discord-link-cleaner.service -n 50`
-- Verify your bot token is correct
+- Verify `DISCORD_BOT_TOKEN` is set in the environment used to start the bot and contains the correct token
 - Ensure your server has internet connectivity
 - Check if the bot token is valid and hasn't been regenerated
 - Verify the regex pattern in `config.json` is valid

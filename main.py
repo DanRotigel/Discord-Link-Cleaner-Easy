@@ -14,6 +14,15 @@ import sys
 # Setup
 #--------------------------------------------------------------------
 
+bot_token = os.environ.get("DISCORD_BOT_TOKEN", "").strip()
+if not bot_token:
+    sys.exit(
+        "DLC could not start: DISCORD_BOT_TOKEN is missing or empty. "
+        "Set this environment variable to your Discord bot token, then start DLC again. "
+        "See the README's 'Configure the Bot' section for instructions. "
+        "Do not put your token in config.json."
+    )
+
 
 def get_app_folder() -> str:
     """
@@ -112,8 +121,11 @@ def ensure_json_valid(filepath: str, default_content: dict) -> None:
             # Create a backup before making changes
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             backup_path = f"{filepath}.backup_{timestamp}.json"
+            backup_data = data.copy()
+            if filepath == CONFIG_PATH:
+                backup_data.pop("bot_token", None)
             with open(backup_path, 'w', encoding='utf-8') as backup_file:
-                json.dump(data, backup_file, indent=4)
+                json.dump(backup_data, backup_file, indent=4)
             print(f"Backed up original config file to {backup_path}")
 
             # Write cleaned data
@@ -129,7 +141,6 @@ CONFIG_PATH = os.path.join(APP_FOLDER, 'config.json')
 TRACKERS_PATH = os.path.join(APP_FOLDER, 'trackers.json')
 
 default_config = {
-    "bot_token": "",
     "mention_reply_author": True,
     "require_links": True,
     "regex_keys": "(?i)\\b((?:https?://|www\\.)[^\\s<>\"']+|(?:[a-z0-9-]+\\.)+[a-z]{2,}(?:/[^\\s<>\"']*)?)\\b"
@@ -167,7 +178,6 @@ with open(CONFIG_PATH, 'r', encoding="utf-8") as f:
 with open(TRACKERS_PATH, 'r', encoding="utf-8") as f:
     trackers = json.load(f)
 
-bot_token = config.get("bot_token", default_config["bot_token"])
 mention_reply_author = config.get("mention_reply_author", default_config["mention_reply_author"])
 require_links = config.get("require_links", default_config["require_links"])
 
@@ -260,6 +270,7 @@ def load_config():
 
 def save_config():
     """Save current configuration to JSON file."""
+    config.pop("bot_token", None)
     with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=4)
 
