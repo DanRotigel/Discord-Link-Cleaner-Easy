@@ -137,8 +137,10 @@ def ensure_json_valid(filepath: str, default_content: dict) -> None:
         print(f"Error validating JSON file {filepath}: {e}")
 
 APP_FOLDER = get_app_folder()
-CONFIG_PATH = os.path.join(APP_FOLDER, 'config.json')
-TRACKERS_PATH = os.path.join(APP_FOLDER, 'trackers.json')
+DATA_DIR = os.environ.get("DATA_DIR") or APP_FOLDER
+os.makedirs(DATA_DIR, exist_ok=True)
+CONFIG_PATH = os.path.join(DATA_DIR, 'config.json')
+TRACKERS_PATH = os.path.join(DATA_DIR, 'trackers.json')
 
 default_config = {
     "mention_reply_author": True,
