@@ -1,4 +1,1 @@
-discord.py
-vt-py
-aiohttp
-logging
+discord.py==2.7.1
