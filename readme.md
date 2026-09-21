@@ -1,5 +1,7 @@
 # Discord Link Cleaner Easy
 
+> **Before deploying:** Please review the [Privacy Policy](./PRIVACY.md) and [Disclaimer & Terms of Use](./DISCLAIMER.md). By deploying DLC-E, you acknowledge that you are responsible for your own Discord bot, hosting account, permissions, and use of the software.
+
 Discord Link Cleaner (DLC) is a Discord bot that removes common tracking parameters from links posted in your server.
 
 This fork focuses on making DLC easy to deploy for nontechnical Discord administrators. The recommended setup uses Railway, so you do not need to install Python, use Linux, or run commands in a terminal.
