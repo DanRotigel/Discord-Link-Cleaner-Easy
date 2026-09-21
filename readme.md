@@ -1,484 +1,208 @@
-# Discord Link Cleaner Bot
+# Discord Link Cleaner Easy
 
-A Discord bot that automatically removes tracking parameters from URLs in messages to help protect user privacy. The bot detects URLs with tracking parameters (like `utm_source`, `fbclid`, `gclid`, etc.) and reposts the message with cleaned URLs.
+Discord Link Cleaner (DLC) is a Discord bot that removes common tracking parameters from links posted in your server.
 
-## Table of Contents
+This fork focuses on making DLC easy to deploy for nontechnical Discord administrators. The recommended setup uses Railway, so you do not need to install Python, use Linux, or run commands in a terminal.
 
-- [Discord Link Cleaner Bot](#discord-link-cleaner-bot)
-  - [Features](#features)
-  - [Demo](#demo)
-  - [Table of Contents](#table-of-contents)
-  - [Features](#features)
-  - [Prerequisites](#prerequisites)
-  - [Creating a Discord Bot](#creating-a-discord-bot)
-    - [Step 1: Create a Discord Application](#step-1-create-a-discord-application)
-    - [Step 2: Create a Bot](#step-2-create-a-bot)
-    - [Step 3: Set Bot Permissions](#step-3-set-bot-permissions)
-    - [Step 4: Invite Bot to Your Server](#step-4-invite-bot-to-your-server)
-  - [Hosting on Ubuntu Server](#hosting-on-ubuntu-server)
-    - [Step 1: Update System Packages](#step-1-update-system-packages)
-    - [Step 2: Install Python and pip](#step-2-install-python-and-pip)
-    - [Step 3: Clone or Upload the Bot Files](#step-3-clone-or-upload-the-bot-files)
-    - [Step 4: Create a Virtual Environment](#step-4-create-a-virtual-environment)
-    - [Step 5: Install Dependencies](#step-5-install-dependencies)
-    - [Step 6: Configure the Bot](#step-6-configure-the-bot)
-    - [Step 7: Test the Bot](#step-7-test-the-bot)
-    - [Step 8: Create a Systemd Service (Recommended)](#step-8-create-a-systemd-service-recommended)
-  - [Usage](#usage)
-  - [Configuration Options](#configuration-options)
-    - [Required Configuration](#required-configuration)
-    - [Bot Behavior Settings](#bot-behavior-settings)
-    - [Tracker Configuration](#tracker-configuration)
-  - [Updating the Bot](#updating-the-bot)
-    - [Manual Update](#manual-update)
-  - [Uninstalling the Bot](#uninstalling-the-bot)
-  - [Troubleshooting](#troubleshooting)
-  - [Security Notes](#security-notes)
-  - [License](#license)
+## What DLC Does
 
-## Features
+When someone posts a tracked link, DLC:
+1. Detects known tracking parameters such as `utm_source`, `fbclid`, and `gclid`.
+2. Removes the tracking parameters.
+3. Deletes the original tracked message when appropriate.
+4. Reposts the message with the cleaned link.
 
-- Automatically detects URLs in Discord messages
-- Removes tracking parameters from URLs (Google Analytics, Facebook, TikTok, Twitter, Reddit, and many more)
-- Deletes the original message and reposts it with cleaned URLs
-- Configurable tracker list via `trackers.json`
-- Supports custom regex patterns for URL detection
-- Optional requirement for messages to contain links before processing
+It works at the Discord server level, so members do not need a browser extension, custom Discord client, or mobile app.
 
-## Demo
-Visit the [Discord Server!](https://discord.gg/BPRdkATNB6)
+## What You Need
 
-## Prerequisites
+Before starting, you need:
+- A Discord account
+- Permission to add a bot to the Discord server you want to protect
+- A Railway account
+- About five minutes
 
-Before you begin, you'll need:
+No command-line experience is required.
 
-- A Discord application and bot token
-- An Ubuntu server (or any Linux system with Python 3.7+)
-- Basic knowledge of Linux command line
+## Easy Installation with Railway
 
-## Creating a Discord Bot
+This is the recommended installation method for this fork.
+
+Railway runs your own copy of DLC continuously in the cloud. The DLC project does not operate a shared bot or host your Discord messages.
+
+A public one-click Railway deployment button will be added here after the template is published.
 
 ### Step 1: Create a Discord Application
 
 1. Go to https://discord.com/developers/applications
-2. Click "New Application" in the top right corner
-3. Give your application a name and click "Create"
+2. Click **New Application**.
+3. Give the application a name, such as **DLC**.
+4. Click **Create**.
 
-### Step 2: Create a Bot
+### Step 2: Enable the Bot
 
-1. In your application, go to the "Bot" section in the left sidebar
-2. Click "Add Bot" and confirm
-3. Under "Privileged Gateway Intents", enable "Message Content Intent"
-   - This is required for the bot to read message content and detect URLs
-4. Copy the bot token (you'll need this later)
-   - Keep this token secret! Never share it publicly
+1. Open the **Bot** page for your application.
+2. Under **Privileged Gateway Intents**, enable **Message Content Intent**.
+3. Copy the bot token.
+   - If Discord only shows **Reset Token**, use that to generate a new token.
+   - Treat this token like a password. Do not post it publicly or commit it to GitHub.
 
-### Step 3: Set Bot Permissions
+DLC needs Message Content Intent so it can inspect messages for links that contain tracking parameters.
 
-1. Go to the "OAuth2" section in the left sidebar
-2. Click on "URL Generator" submenu
-3. Under "Scopes", check:
-   - `bot`
-4. Under "Bot Permissions", check the following:
-   - View Channels
-   - Send Messages
-   - Send Messages in Threads
-   - Manage Messages
-   - Read Message History
-5. Copy the generated URL at the bottom of the page
+### Step 3: Configure Discord Installation Permissions
 
-### Step 4: Invite Bot to Your Server
+Open the **Installation** page for your Discord application.
 
-1. Use the URL you copied in Step 3 to invite the bot to your Discord server
-2. Select the server where you want to add the bot
-3. Authorize the bot with the permissions you selected
-4. The bot should now appear in your server (though it won't be online until you run it)
+Under **Default Install Settings → Guild Install**, include these scopes:
+- `bot`
+- `applications.commands`
 
-## Hosting on Ubuntu Server
+Give the bot these permissions:
+- View Channels
+- Send Messages
+- Send Messages in Threads
+- Manage Messages
+- Read Message History
 
-### Step 1: Update System Packages
+Save the changes.
 
-```bash
-sudo apt update
-sudo apt upgrade -y
+### Step 4: Deploy DLC to Railway
+
+Open the DLC Railway template and choose **Deploy**.
+
+When Railway asks you to configure the deployment:
+1. Enter your Discord bot token for `DISCORD_BOT_TOKEN`.
+2. Leave `DATA_DIR` set to `/data`.
+3. Deploy the project.
+
+The template includes a persistent volume mounted at `/data`, so DLC settings survive restarts and redeployments.
+
+Wait until Railway reports that the DLC service is **Online**.
+
+### Step 5: Add the Bot to Your Discord Server
+
+Return to the Discord Developer Portal.
+
+1. Open the **Installation** page for your DLC application.
+2. Find **Install Link**.
+3. Make sure it is set to **Discord Provided Link**.
+4. Copy the install link.
+5. Open the link in your browser.
+6. Select the Discord server you want to protect.
+7. Authorize the bot.
+
+### Step 6: Test DLC
+
+Post this link in a channel the bot can access:
+
+```text
+https://example.com/?utm_source=discord&utm_campaign=dlc-test
 ```
 
-### Step 2: Install Python and pip
+DLC should delete the original tracked message and repost:
 
-```bash
-sudo apt install python3 python3-pip python3-venv -y
+```text
+https://example.com/
 ```
 
-### Step 3: Clone or Upload the Bot Files
+If that happens, DLC is working.
 
-If you're using Git:
+## Using DLC
 
-```bash
-git clone https://github.com/StroepWafel/Discord-Link-Cleaner
-cd Discord-Link-Cleaner
-```
+Once running, DLC automatically watches messages in channels where it has permission to operate.
 
-Alternatively, you can upload the files using SCP, SFTP, or any file transfer method:
+When a message contains a recognized tracking parameter, DLC removes the tracker and reposts the cleaned message.
 
-```bash
-# Example using SCP from your local machine
-scp -r Discord-Link-Cleaner user@your-server-ip:/path/to/destination
-```
+## Discord Commands
 
-### Step 4: Create a Virtual Environment
+### `/settings`
+Shows the current DLC settings.
 
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
+### `/set_mention`
+Controls whether DLC mentions the original author when reposting a cleaned message.
 
-### Step 5: Install Dependencies
+### `/set_require_links`
+Controls the `require_links` setting. For normal use, leave this enabled.
 
-```bash
-pip install --upgrade pip
-pip install -r requirements.txt
-```
+### `/set_regex`
+Changes the pattern DLC uses to detect URLs. Most users should leave the default unchanged.
 
-**Note:** The bot only requires `discord.py`. You can simplify `requirements.txt` to just contain `discord.py` if desired.
+### `/trackers list`
+Shows the tracking parameters DLC currently recognizes.
 
-### Step 6: Configure the Bot
+### `/trackers add`
+Adds a tracking parameter.
 
-The bot reads its token only from the `DISCORD_BOT_TOKEN` environment variable. Do not put the token in `config.json`, a `.env` file, a shell startup file, or a systemd service file.
+### `/trackers remove`
+Removes a tracking parameter.
 
-For a local Ubuntu/Bash session, enter the token at a hidden prompt so it is not saved in shell history:
+Settings and tracker data are stored on the Railway persistent volume so they survive restarts.
 
-```bash
-read -r -s -p "Discord bot token: " DISCORD_BOT_TOKEN
-printf '\n'
-export DISCORD_BOT_TOKEN
-```
+## Privacy and Security
 
-The token remains available to programs started from this terminal until you close it or run `unset DISCORD_BOT_TOKEN`. Repeat these steps in a new terminal. On a cloud host, set `DISCORD_BOT_TOKEN` using the host's secret/environment-variable settings.
+DLC must receive message content in the Discord channels it protects so it can detect tracked URLs.
 
-If the variable is missing or empty, DLC exits with instructions before creating configuration files or connecting to Discord.
+This fork is designed to minimize additional data handling:
+- DLC runs in your own Railway project.
+- The DLC project does not operate a central hosted bot.
+- Discord bot tokens are supplied through Railway environment variables.
+- Bot tokens are not stored in `config.json` or committed to GitHub.
+- DLC does not intentionally store Discord message contents, URLs, or usernames.
+- URL cleaning is performed locally by the running DLC process rather than by sending URLs to an external cleaning API.
 
-`config.json` stores only behavior settings and is created automatically when you start the bot with the environment variable set. You can edit those settings as described under [Configuration Options](#configuration-options).
-
-For existing installations, `bot_token` in `config.json` is no longer used. On startup with the environment variable set, DLC removes that field without copying it into a new backup. Remove any token-bearing older backups yourself; existing backup files are not changed.
-
-### Step 7: Test the Bot
-
-Run the bot manually to ensure everything works:
-
-```bash
-python3 main.py
-```
-
-You should see "Logged in as [Bot Name]!" if everything is configured correctly.
-
-Post a message with a URL containing tracking parameters (e.g., `https://example.com/page?utm_source=test&fbclid=123`) to check everything is working. The bot should delete your message and repost it with the tracking parameters removed.
-
-Press Ctrl+C to stop the bot.
-
-### Step 8: Create a Systemd Service (Recommended)
-
-To keep the bot running in the background and automatically restart it if it crashes, create a systemd service:
-
-1. Create the service file:
-
-```bash
-sudo nano /etc/systemd/system/discord-link-cleaner.service
-```
-
-2. Add the following content (adjust paths as needed):
-
-```ini
-[Unit]
-Description=Discord Link Cleaner Bot
-After=network.target
-
-[Service]
-Type=simple
-User=your-username
-WorkingDirectory=/path/to/Discord-Link-Cleaner
-Environment="PATH=/path/to/Discord-Link-Cleaner/venv/bin"
-PassEnvironment=DISCORD_BOT_TOKEN
-ExecStart=/path/to/Discord-Link-Cleaner/venv/bin/python3 /path/to/Discord-Link-Cleaner/main.py
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Replace:
-- `your-username` with your Ubuntu username
-- `/path/to/Discord-Link-Cleaner` with the actual path to your bot directory
-
-Save the file (Ctrl+X, then Y, then Enter if using nano).
-
-3. From the terminal where you set `DISCORD_BOT_TOKEN`, pass it to systemd's in-memory environment, then start the service:
-
-```bash
-sudo --preserve-env=DISCORD_BOT_TOKEN systemctl import-environment DISCORD_BOT_TOKEN
-```
-
-This requires sudo permission to preserve that variable. The token is not written into the service file. After a reboot, re-enter the token using Step 6, repeat the import above, and restart the service; it cannot start successfully until the token is supplied again.
-
-Reload systemd and start the service:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl enable discord-link-cleaner.service
-sudo systemctl start discord-link-cleaner.service
-```
-
-4. Check the status:
-
-```bash
-sudo systemctl status discord-link-cleaner.service
-```
-
-5. View logs if needed:
-
-```bash
-sudo journalctl -u discord-link-cleaner.service -f
-```
-
-## Usage
-
-Once the bot is running, it will automatically:
-
-1. Monitor all channels where it has access
-2. Detect URLs in messages
-3. Check if URLs contain tracking parameters
-4. If trackers are found, delete the original message and repost it with cleaned URLs
-5. Include a notice indicating which companies' trackers were removed
-
-The bot will only process messages that contain URLs (if `require_links` is set to `true` in the config).
-
-**Example:**
-- Original message: `Check this out: https://example.com/page?utm_source=test&fbclid=123`
-- Bot reposts: `@user Your message has been reposted without trackers from Google, and Meta: Check this out: https://example.com/page`
-
-## Configuration Options
-
-You can customize the bot behavior by editing the variables in your `config.json` file. The bot will automatically create this file with default values on first run if it doesn't exist.
-
-**Important:** Set `DISCORD_BOT_TOKEN` before the first run. Once `config.json` is created, you can edit behavior settings and restart the bot. Keep the token out of this file.
-
-### Required Configuration
-
-**`DISCORD_BOT_TOKEN`** (environment variable, required)
-- Your Discord bot token obtained from the Discord Developer Portal
-- Get your token at: https://discord.com/developers/applications
-- This is required for the bot to connect to Discord
-- Set it using the hidden prompt in [Step 6](#step-6-configure-the-bot) or your cloud host's secret settings. Restart the bot after changing it.
-
-### Bot Behavior Settings
-
-**`mention_reply_author`** (boolean, default: `true`)
-- Whether to mention (ping) the original message author when reposting with cleaned URLs
-- Set to `true` to ping the user who posted the message
-- Set to `false` to repost without mentioning (recommended for busy servers)
-- Example in `config.json`: `"mention_reply_author": false`
-
-**`require_links`** (boolean, default: `true`)
-- Whether the bot should only process messages that contain URLs
-- Set to `true` to only process messages with links (recommended)
-- Set to `false` to process all messages (not recommended, as the bot will check every message)
-- Example in `config.json`: `"require_links": true`
-
-**`regex_keys`** (string, default: `"(?i)\\b((?:https?://|www\\.)[^\\s<>\"']+|(?:[a-z0-9-]+\\.)+[a-z]{2,}(?:/[^\\s<>\"']*)?)\\b"`)
-- Regular expression pattern used to detect URLs in messages
-- The default pattern matches HTTP/HTTPS URLs and domain names
-- Only modify if you understand regex patterns and need custom URL detection
-- Example in `config.json`: `"regex_keys": "(?i)\\b((?:https?://|www\\.)[^\\s<>\"']+|(?:[a-z0-9-]+\\.)+[a-z]{2,}(?:/[^\\s<>\"']*)?)\\b"`
-
-### Tracker Configuration
-
-The bot uses `trackers.json` to define which URL parameters should be removed. This file is automatically created on first run with a comprehensive list of tracking parameters from major companies:
-
-- **Google**: utm_source, utm_medium, utm_campaign, gclid, etc.
-- **Meta (Facebook)**: fbclid, fb_action_ids, fb_source, etc.
-- **TikTok**: ttclid, tt_content_id, etc.
-- **Microsoft**: msclkid, li_fat_id, etc.
-- **Twitter**: twclid, ref_src, etc.
-- **Reddit**: rdt_cid, rdt_source, etc.
-- **Snapchat**: sc_cid, sc_source, etc.
-- **Pinterest**: epik, pin_campaign, etc.
-- **Amazon**: tag, ascsubtag, etc.
-- **Mailchimp**: mc_cid, mc_eid
-- **HubSpot**: hsa_acc, hsa_cam, etc.
-- **Adobe**: s_cid, ef_id
-- **Salesforce**: pi_campaign_id, pi_source, etc.
-- **Shopify**: shopify, shopify_app, etc.
-- **Email**: mkt_tok, _hsenc, etc.
-- **Affiliate**: aff_id, affiliate_id, ref, etc.
-- **Analytics**: _ga, _gl, _gid, etc.
-
-You can customize `trackers.json` to add or remove tracking parameters as needed. The file structure is:
-
-```json
-{
-    "CompanyName": ["param1", "param2", "param3"],
-    "AnotherCompany": ["param4", "param5"]
-}
-```
-
-**Note:** The bot automatically validates and cleans `trackers.json` on startup, ensuring it matches the expected structure. If you add invalid entries, they may be removed.
-
-### Configuration File Details
-
-The configuration files:
-- `config.json`: Contains behavior settings only; the token comes from `DISCORD_BOT_TOKEN`
-- `trackers.json`: Contains the list of tracking parameters to remove
-
-Both files:
-- Are automatically created on first run if they don't exist
-- Are excluded from git (via `.gitignore`) so they won't be overwritten by updates
-- Are located in the same directory as `main.py`
-- Can be edited at any time - changes take effect after restarting the bot
-- Are automatically validated and cleaned on startup
-
-**First-time setup:** Set `DISCORD_BOT_TOKEN` as described in Step 6, then run `python3 main.py`. The bot creates its configuration files automatically.
-
-## Updating the Bot
-
-### Manual Update
-
-To update the bot to the latest version:
-
-1. Stop the bot service:
-
-```bash
-sudo systemctl stop discord-link-cleaner.service
-```
-
-2. Navigate to the bot directory:
-
-```bash
-cd /path/to/Discord-Link-Cleaner
-```
-
-Replace `/path/to/Discord-Link-Cleaner` with the actual path where you installed the bot.
-
-3. Pull the latest changes from the repository:
-
-```bash
-git pull origin main
-```
-
-4. Update dependencies (if requirements.txt has changed):
-
-```bash
-source venv/bin/activate
-pip install --upgrade -r requirements.txt
-```
-
-5. Restart the bot service:
-
-```bash
-sudo systemctl start discord-link-cleaner.service
-```
-
-6. Verify the bot is running:
-
-```bash
-sudo systemctl status discord-link-cleaner.service
-```
-
-**Important Notes:**
-- Your configuration in `config.json` and `trackers.json` will never be overwritten by updates because they're excluded from git. The bot will continue to use your custom settings even after updates.
-- The bot automatically validates and cleans configuration files on startup, ensuring they match the expected structure.
-
-## Uninstalling the Bot
-
-If you need to remove the bot from your server, follow these steps:
-
-### Step 1: Stop and Disable the Systemd Service
-
-If you created a systemd service, stop and disable it:
-
-```bash
-sudo systemctl stop discord-link-cleaner.service
-sudo systemctl disable discord-link-cleaner.service
-```
-
-### Step 2: Remove the Systemd Service File
-
-```bash
-sudo rm /etc/systemd/system/discord-link-cleaner.service
-sudo systemctl daemon-reload
-```
-
-### Step 3: Remove the Bot Files
-
-Navigate to the bot directory and remove it:
-
-```bash
-cd /path/to/Discord-Link-Cleaner
-cd ..
-rm -rf Discord-Link-Cleaner
-```
-
-Replace `/path/to/Discord-Link-Cleaner` with the actual path where you installed the bot.
-
-### Step 4: Remove Bot from Discord Server (Optional)
-
-If you want to remove the bot from your Discord server:
-
-1. Go to your Discord server
-2. Right-click on the bot in the member list
-3. Select "Kick" or "Ban" to remove it from the server
-
-Alternatively, you can revoke the bot's access in the server settings under "Integrations" or "Members".
-
-### Note
-
-This will remove the bot files and service, but will not uninstall Python or pip packages that may be used by other applications on your system. If you want to remove the Python packages installed for this bot specifically, you can deactivate and remove the virtual environment before deleting the bot directory:
-
-```bash
-cd /path/to/Discord-Link-Cleaner
-source venv/bin/activate
-deactivate
-cd ..
-rm -rf Discord-Link-Cleaner
-```
+Railway is a third-party hosting provider, so your DLC instance runs on Railway infrastructure.
 
 ## Troubleshooting
 
-### Bot doesn't respond to URLs
+### Railway says the service crashed
+Check that `DISCORD_BOT_TOKEN` exists in Railway **Variables** and contains the current bot token.
 
-- Verify the bot is online in your Discord server
-- Check that the Message Content Intent is enabled in Discord Developer Portal
-- Ensure the bot has "View Channels", "Read Message History", and "Manage Messages" permissions
-- Verify `require_links` is set appropriately in `config.json`
-- Check bot logs for errors: `sudo journalctl -u discord-link-cleaner.service -f`
+### The bot is online but does not clean links
+Check that:
+- **Message Content Intent** is enabled.
+- The bot has access to the channel.
+- The bot has the required permissions.
+- The URL contains a tracker DLC recognizes.
 
-### Bot crashes or stops running
+### Settings disappear after a restart
+Confirm:
+- `DATA_DIR=/data`
+- A persistent volume is mounted at `/data`
 
-- Check systemd logs: `sudo journalctl -u discord-link-cleaner.service -n 50`
-- Verify `DISCORD_BOT_TOKEN` is set in the environment used to start the bot and contains the correct token
-- Ensure your server has internet connectivity
-- Check if the bot token is valid and hasn't been regenerated
-- Verify the regex pattern in `config.json` is valid
+### The bot cannot delete the original message
+Make sure the bot has **Manage Messages** permission in that channel.
 
-### Permission errors
+## Removing DLC
 
-- Make sure the bot has all required permissions in the Discord server
-- Verify the bot's role in the server has the necessary channel permissions
-- Ensure "Manage Messages" permission is granted so the bot can delete messages
+To stop using DLC:
+1. Remove or delete the DLC project from Railway.
+2. Remove the DLC bot from your Discord server.
+3. Optionally reset the bot token in the Discord Developer Portal.
 
-### Bot doesn't remove trackers
+## Advanced / Manual Hosting
 
-- Check that `trackers.json` contains the tracking parameters you expect
-- Verify the URL format matches the regex pattern in `config.json`
-- Check bot logs to see if URLs are being detected
+DLC can still be hosted manually on another computer or cloud server.
 
-## Security Notes
+This fork is primarily optimized for the browser-based Railway installation above.
 
-- Never commit your bot token to version control
-- Keep your bot token secure
-- Regularly regenerate tokens if they're accidentally exposed
-- The bot requires "Manage Messages" permission to delete and repost messages - only grant this permission if you trust the bot
-- The bot automatically validates configuration files on startup to prevent malicious modifications
+Requirements:
+- Python 3.12
+- `discord.py`
+- `DISCORD_BOT_TOKEN` environment variable
 
-## License
+Optional:
+- `DATA_DIR` controls where `config.json` and `trackers.json` are stored.
 
-See LICENSE file for details.
+Start with:
+
+```bash
+python main.py
+```
+
+## Open Source and License
+
+This project is open source and licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+
+This fork is based on the original [Discord-Link-Cleaner](https://github.com/StroepWafel/Discord-Link-Cleaner) project by StroepWafel.
+
+See the `LICENSE` file for the full license text.
