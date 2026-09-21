@@ -30,7 +30,9 @@ This is the recommended installation method for this fork.
 
 Railway runs your own copy of DLC continuously in the cloud. The DLC project does not operate a shared bot or host your Discord messages.
 
-A public one-click Railway deployment button will be added here after the template is published.
+**[Deploy DLC-E on Railway](https://railway.com/deploy/dlc-e)**
+
+That link opens the public DLC-E Railway template. Railway will create your own copy of the service; you only need to supply your Discord bot token.
 
 ### Step 1: Create a Discord Application
 
@@ -68,16 +70,19 @@ Save the changes.
 
 ### Step 4: Deploy DLC to Railway
 
-Open the DLC Railway template and choose **Deploy**.
+1. Open the public template: **[Deploy DLC-E on Railway](https://railway.com/deploy/dlc-e)**.
+2. Sign in to Railway if prompted.
+3. Click **Deploy Now**.
+4. If Railway shows a **Configure** button, click it.
+5. Paste your Discord bot token into `DISCORD_BOT_TOKEN`.
+6. Leave `DATA_DIR` set to `/data`.
+7. Start the deployment.
 
-When Railway asks you to configure the deployment:
-1. Enter your Discord bot token for `DISCORD_BOT_TOKEN`.
-2. Leave `DATA_DIR` set to `/data`.
-3. Deploy the project.
+The template already includes the persistent volume DLC-E uses to save its settings, so you should not need to create storage manually.
 
-The template includes a persistent volume mounted at `/data`, so DLC settings survive restarts and redeployments.
+Railway will build and start your private DLC-E instance. Wait until the service status shows **Online** before continuing.
 
-Wait until Railway reports that the DLC service is **Online**.
+If the deployment immediately crashes, first check that `DISCORD_BOT_TOKEN` contains the current token from the Discord Developer Portal.
 
 ### Step 5: Add the Bot to Your Discord Server
 
