@@ -30,6 +30,8 @@ This is the recommended installation method for this fork.
 
 Railway runs your own copy of DLC continuously in the cloud. The DLC project does not operate a shared bot or host your Discord messages.
 
+**Cost:** Railway currently lists its **Hobby plan at $5/month minimum**, which includes $5 of monthly resource usage. DLC-E is lightweight, so this is the plan we recommend for a simple always-on installation. Railway pricing can change, and usage beyond the included amount can cost extra. See [Railway pricing](https://railway.com/pricing) for current details.
+
 **[Deploy DLC-E on Railway](https://railway.com/deploy/dlc-e)**
 
 That link opens the public DLC-E Railway template. Railway will create your own copy of the service; you only need to supply your Discord bot token.
