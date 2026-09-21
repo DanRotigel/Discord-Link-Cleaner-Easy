@@ -200,10 +200,40 @@ except re.error as e:
 def has_link(message: str) -> bool:
     return bool(REGEX.search(message))
 
+AMAZON_DOMAINS = {
+    "amazon.com", "amazon.ca", "amazon.com.mx", "amazon.com.br",
+    "amazon.co.uk", "amazon.de", "amazon.fr", "amazon.it", "amazon.es",
+    "amazon.nl", "amazon.se", "amazon.pl", "amazon.com.be", "amazon.ie",
+    "amazon.co.jp", "amazon.in", "amazon.com.au", "amazon.sg", "amazon.cn",
+    "amazon.com.tr", "amazon.ae", "amazon.sa", "amazon.eg", "amazon.co.za",
+}
+AMAZON_EXTRA_PARAMS = {"ref_", "content-id", "_encoding"}
+
+
+def is_amazon_url(url):
+    parsed = urlparse(url)
+    if not parsed.scheme and not parsed.netloc:
+        parsed = urlparse("//" + url)
+    hostname = (parsed.hostname or "").lower().rstrip(".")
+    return any(hostname == domain or hostname.endswith("." + domain)
+               for domain in AMAZON_DOMAINS)
+
+
+def tracker_owner(key, amazon_url):
+    key = key.lower()
+    if amazon_url and (key in AMAZON_EXTRA_PARAMS or key.startswith(("pd_rd_", "pf_rd_"))):
+        return "Amazon"
+    owner = PARAM_INDEX.get(key)
+    if owner == "Amazon" and not amazon_url:
+        return None
+    return owner
+
+
 def has_trackers(url):
     parsed = urlparse(url)
+    amazon_url = is_amazon_url(url)
     for key, _ in parse_qsl(parsed.query, keep_blank_values=True):
-        if key.lower() in PARAM_INDEX:
+        if tracker_owner(key, amazon_url):
             return True
     return False
 
@@ -216,11 +246,12 @@ def build_param_index(tracker_map):
 
 def clean_url(url):
     parsed = urlparse(url)
+    amazon_url = is_amazon_url(url)
     kept = []
     removed = {}
 
     for key, value in parse_qsl(parsed.query, keep_blank_values=True):
-        owner = PARAM_INDEX.get(key.lower())
+        owner = tracker_owner(key, amazon_url)
         if owner:
             removed.setdefault(owner, []).append(key)
         else:
