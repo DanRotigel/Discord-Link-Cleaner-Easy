@@ -200,6 +200,18 @@ except re.error as e:
 def has_link(message: str) -> bool:
     return bool(REGEX.search(message))
 
+def extract_urls(message):
+    urls = []
+    for match in REGEX.finditer(message):
+        end = match.end()
+        url = match.group(0)
+        # The configured regex's final word boundary can omit query padding.
+        if "?" in url and "#" not in url:
+            while end < len(message) and message[end] == "=":
+                end += 1
+        urls.append(message[match.start():end])
+    return urls
+
 AMAZON_DOMAINS = {
     "amazon.com", "amazon.ca", "amazon.com.mx", "amazon.com.br",
     "amazon.co.uk", "amazon.de", "amazon.fr", "amazon.it", "amazon.es",
@@ -209,6 +221,7 @@ AMAZON_DOMAINS = {
 }
 AMAZON_EXTRA_PARAMS = {"ref_", "content-id", "_encoding"}
 FACEBOOK_PARAMS = {"ref", "referral_code", "referral_story_type"}
+INSTAGRAM_PARAMS = {"stkn", "igsh", "igshid", "igsi", "ig_rid"}
 
 
 def matches_domains(url, domains):
@@ -224,8 +237,11 @@ def is_amazon_url(url):
     return matches_domains(url, AMAZON_DOMAINS)
 
 
-def tracker_owner(key, amazon_url, facebook_url=False):
+def tracker_owner(key, amazon_url, facebook_url=False, instagram_url=False):
     key = key.lower()
+    # These parameters are Instagram-only, including igsh in saved Meta lists.
+    if key in INSTAGRAM_PARAMS:
+        return "Meta" if instagram_url else None
     if facebook_url and key in FACEBOOK_PARAMS:
         return "Meta"
     if amazon_url and (key in AMAZON_EXTRA_PARAMS or key.startswith(("pd_rd_", "pf_rd_"))):
@@ -240,8 +256,9 @@ def has_trackers(url):
     parsed = urlparse(url)
     amazon_url = is_amazon_url(url)
     facebook_url = matches_domains(url, {"facebook.com"})
+    instagram_url = matches_domains(url, {"instagram.com"})
     for key, _ in parse_qsl(parsed.query, keep_blank_values=True):
-        if tracker_owner(key, amazon_url, facebook_url):
+        if tracker_owner(key, amazon_url, facebook_url, instagram_url):
             return True
     return False
 
@@ -256,11 +273,12 @@ def clean_url(url):
     parsed = urlparse(url)
     amazon_url = is_amazon_url(url)
     facebook_url = matches_domains(url, {"facebook.com"})
+    instagram_url = matches_domains(url, {"instagram.com"})
     kept = []
     removed = {}
 
     for key, value in parse_qsl(parsed.query, keep_blank_values=True):
-        owner = tracker_owner(key, amazon_url, facebook_url)
+        owner = tracker_owner(key, amazon_url, facebook_url, instagram_url)
         if owner:
             removed.setdefault(owner, []).append(key)
         else:
@@ -356,7 +374,7 @@ async def on_message(message):
     if not (has_link(message.content) and require_links):
         return  
 
-    urls = re.findall(REGEX, message.content)
+    urls = extract_urls(message.content)
     if not urls:
         return
 

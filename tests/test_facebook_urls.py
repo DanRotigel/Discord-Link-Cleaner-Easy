@@ -55,6 +55,9 @@ class FacebookURLTests(unittest.TestCase):
 
     def test_existing_meta_trackers_remain_global(self):
         for parameter in self.app["default_trackers"]["Meta"]:
+            # igsh is now explicitly Instagram-only; covered by Instagram tests.
+            if parameter == "igsh":
+                continue
             with self.subTest(parameter=parameter):
                 url = f"https://example.org/?{parameter}=x&referral_code=keep"
                 self.assertTrue(self.app["has_trackers"](url))
