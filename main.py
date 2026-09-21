@@ -208,19 +208,26 @@ AMAZON_DOMAINS = {
     "amazon.com.tr", "amazon.ae", "amazon.sa", "amazon.eg", "amazon.co.za",
 }
 AMAZON_EXTRA_PARAMS = {"ref_", "content-id", "_encoding"}
+FACEBOOK_PARAMS = {"ref", "referral_code", "referral_story_type"}
 
 
-def is_amazon_url(url):
+def matches_domains(url, domains):
     parsed = urlparse(url)
     if not parsed.scheme and not parsed.netloc:
         parsed = urlparse("//" + url)
     hostname = (parsed.hostname or "").lower().rstrip(".")
     return any(hostname == domain or hostname.endswith("." + domain)
-               for domain in AMAZON_DOMAINS)
+               for domain in domains)
 
 
-def tracker_owner(key, amazon_url):
+def is_amazon_url(url):
+    return matches_domains(url, AMAZON_DOMAINS)
+
+
+def tracker_owner(key, amazon_url, facebook_url=False):
     key = key.lower()
+    if facebook_url and key in FACEBOOK_PARAMS:
+        return "Meta"
     if amazon_url and (key in AMAZON_EXTRA_PARAMS or key.startswith(("pd_rd_", "pf_rd_"))):
         return "Amazon"
     owner = PARAM_INDEX.get(key)
@@ -232,8 +239,9 @@ def tracker_owner(key, amazon_url):
 def has_trackers(url):
     parsed = urlparse(url)
     amazon_url = is_amazon_url(url)
+    facebook_url = matches_domains(url, {"facebook.com"})
     for key, _ in parse_qsl(parsed.query, keep_blank_values=True):
-        if tracker_owner(key, amazon_url):
+        if tracker_owner(key, amazon_url, facebook_url):
             return True
     return False
 
@@ -247,11 +255,12 @@ def build_param_index(tracker_map):
 def clean_url(url):
     parsed = urlparse(url)
     amazon_url = is_amazon_url(url)
+    facebook_url = matches_domains(url, {"facebook.com"})
     kept = []
     removed = {}
 
     for key, value in parse_qsl(parsed.query, keep_blank_values=True):
-        owner = tracker_owner(key, amazon_url)
+        owner = tracker_owner(key, amazon_url, facebook_url)
         if owner:
             removed.setdefault(owner, []).append(key)
         else:
