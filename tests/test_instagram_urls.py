@@ -45,7 +45,7 @@ class InstagramURLTests(unittest.TestCase):
                 await self.app["on_message"](message)
             message.delete.assert_awaited_once()
             content = reply.edit.call_args.kwargs["content"]
-            self.assertEqual(content.split("\n", 1)[1], "https://www.instagram.com/p/DdjsB7vC-gS/")
+            self.assertEqual(content, '@tester said "https://www.instagram.com/p/DdjsB7vC-gS/"')
         asyncio.run(check())
 
     def test_padded_url_extraction_preserves_surrounding_punctuation(self):
@@ -68,8 +68,8 @@ class InstagramURLTests(unittest.TestCase):
                     with patch.object(self.app["bot"], "process_commands", new_callable=AsyncMock):
                         await self.app["on_message"](message)
                     reply.edit.assert_awaited_once()
-                    self.assertEqual(reply.edit.call_args.kwargs["content"].split("\n", 1)[1],
-                                     "Look: (https://www.instagram.com/p/item/).")
+                    self.assertEqual(reply.edit.call_args.kwargs["content"],
+                                     '@tester said "Look: (https://www.instagram.com/p/item/)."')
         asyncio.run(check())
         url = "https://www.instagram.com/p/item/?stkn=x&keep=abc=="
         self.assertEqual(self.app["extract_urls"](url), [url])

@@ -396,13 +396,8 @@ async def on_message(message):
                 sanitized_message = sanitized_message.replace(original, cleaned)
 
             # Use mention_reply_author setting
-            author_mention = f"{message.author.mention} " if mention_reply_author else ""
-            notice = (
-                f"{author_mention}Your message has been reposted without trackers from "
-                f"{format_companies(detected_companies)}:"
-            )
-
-            await reply.edit(content=f"{notice}\n{sanitized_message}")
+            author = message.author.mention if mention_reply_author else message.author.display_name
+            await reply.edit(content=f'{author} said "{sanitized_message}"')
         
         except discord.Forbidden:
             print("Bot lacks permission to delete messages.")

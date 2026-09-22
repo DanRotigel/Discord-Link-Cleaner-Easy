@@ -99,8 +99,7 @@ class AmazonURLTests(unittest.TestCase):
                 await self.app["on_message"](message)
             message.delete.assert_awaited_once()
             reply.edit.assert_awaited_once_with(content=(
-                "@tester Your message has been reposted without trackers from Amazon:\n"
-                "https://www.amazon.com/dp/B0HJBCX8VS/"
+                '@tester said "https://www.amazon.com/dp/B0HJBCX8VS/"'
             ))
         asyncio.run(check())
 

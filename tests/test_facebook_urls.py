@@ -93,7 +93,7 @@ class FacebookURLTests(unittest.TestCase):
                 await self.app["on_message"](message)
             message.delete.assert_awaited_once()
             reply.edit.assert_awaited_once_with(content=(
-                "@tester Your message has been reposted without trackers from Meta:\n" + CLEAN_URL
+                f'@tester said "{CLEAN_URL}"'
             ))
         asyncio.run(check())
 
