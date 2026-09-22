@@ -371,7 +371,7 @@ async def on_message(message):
     # Process commands first
     await bot.process_commands(message)
     
-    if not (has_link(message.content) and require_links):
+    if require_links and not has_link(message.content):
         return  
 
     urls = extract_urls(message.content)
