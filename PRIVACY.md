@@ -16,7 +16,7 @@ Your deployment is operated through third-party services you choose, such as Dis
 
 To remove tracking parameters, DLC-E must receive the contents of messages in Discord channels where the bot has access and where Discord provides message content to the bot.
 
-DLC-E examines message text to identify URLs and tracking parameters. When a tracked URL is detected, DLC-E can delete the original message and repost a cleaned version.
+DLC-E processes links only when mentioned using Discord's mention metadata. It examines the invocation message first and, if no tracked URL is found, may read or fetch the message being replied to from Discord. It replies to the invocation with cleaned URLs. It never deletes or edits the invocation or referenced message.
 
 The current DLC-E code does not intentionally store Discord message contents, URLs, usernames, or user IDs in a database or persistent log.
 

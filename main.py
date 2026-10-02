@@ -367,42 +367,50 @@ async def on_ready():
 async def on_message(message):
     if message.author == bot.user:
         return
-    
-    # Process commands first
-    await bot.process_commands(message)
-    
-    if require_links and not has_link(message.content):
-        return  
 
-    urls = extract_urls(message.content)
-    if not urls:
+    await bot.process_commands(message)
+
+    if bot.user is None or bot.user not in message.mentions:
         return
 
-    detected_companies = set()
-    sanitized_map = {}  
+    def cleaned_links(content):
+        links = []
+        for url in extract_urls(content):
+            result = clean_url(url)
+            if result["removed_trackers"]:
+                links.append(result["clean_url"])
+        return links
 
-    for url in urls:
-        result = clean_url(url)
-        if result["removed_trackers"]:
-            detected_companies.update(result["removed_trackers"].keys())
-            sanitized_map[url] = result["clean_url"]
+    links = cleaned_links(message.content)
+    reference = message.reference
+    if not links and reference is not None and reference.type == discord.MessageReferenceType.reply:
+        original = reference.resolved or reference.cached_message
+        if isinstance(original, discord.DeletedReferencedMessage):
+            return
+        if original is None and reference.message_id is not None:
+            # Replies refer to messages in the same channel.
+            if reference.channel_id != message.channel.id:
+                return
+            try:
+                original = await message.channel.fetch_message(reference.message_id)
+            except discord.HTTPException:
+                return
+        if original is not None:
+            links = cleaned_links(original.content)
 
-    if detected_companies:
+    if links:
         try:
-            reply = await message.reply(">>>")
-            await message.delete()
-            sanitized_message = message.content
-            for original, cleaned in sanitized_map.items():
-                sanitized_message = sanitized_message.replace(original, cleaned)
-
-            # Use mention_reply_author setting
-            author = message.author.mention if mention_reply_author else message.author.display_name
-            await reply.edit(content=f'{author} said "{sanitized_message}"')
-        
-        except discord.Forbidden:
-            print("Bot lacks permission to delete messages.")
-        except Exception as e:
-            print(f"Error handling message: {e}")
+            reply_options = {
+                "allowed_mentions": discord.AllowedMentions.none(),
+                "mention_author": False,
+            }
+            heading = "Here's your link!" if len(links) == 1 else "Here are your links!"
+            content = heading + "\n" + "\n".join(links)
+            if len(content) > 2000:
+                content = "Holy crap, that URL is too long!"
+            await message.reply(content, **reply_options)
+        except discord.HTTPException:
+            print("Could not send cleaned links.")
 
 #--------------------------------------------------------------------
 # Admin Commands
@@ -425,12 +433,12 @@ async def settings(interaction: discord.Interaction):
         color=discord.Color.blue()
     )
     embed.add_field(
-        name="Mention Reply Author",
+        name="Mention Reply Author (legacy; no effect on cleaning)",
         value="✅ Enabled" if mention_reply_author else "❌ Disabled",
         inline=False
     )
     embed.add_field(
-        name="Require Links",
+        name="Require Links (legacy; no effect on cleaning)",
         value="✅ Enabled" if require_links else "❌ Disabled",
         inline=False
     )
@@ -442,10 +450,10 @@ async def settings(interaction: discord.Interaction):
     
     await interaction.response.send_message(embed=embed, ephemeral=True)
 
-@bot.tree.command(name="set_mention", description="Enable or disable mentioning the author when reposting messages")
-@app_commands.describe(enabled="Whether to mention the author when reposting")
+@bot.tree.command(name="set_mention", description="Save the legacy author-mention setting; has no effect on link cleaning")
+@app_commands.describe(enabled="Legacy value to save; does not affect link cleaning")
 async def set_mention(interaction: discord.Interaction, enabled: bool):
-    """Set whether to mention the author when reposting messages."""
+    """Save the legacy author-mention setting for configuration compatibility."""
     if not is_admin(interaction):
         await interaction.response.send_message("❌ You need administrator permissions to use this command.", ephemeral=True)
         return
@@ -456,14 +464,15 @@ async def set_mention(interaction: discord.Interaction, enabled: bool):
     load_config()
     
     await interaction.response.send_message(
-        f"✅ Mention reply author has been {'enabled' if enabled else 'disabled'}.",
+        f"✅ Legacy author-mention setting saved: {'enabled' if enabled else 'disabled'}. "
+        "This does not affect link cleaning.",
         ephemeral=True
     )
 
-@bot.tree.command(name="set_require_links", description="Enable or disable requiring links in messages before processing")
-@app_commands.describe(enabled="Whether to only process messages that contain links")
+@bot.tree.command(name="set_require_links", description="Save the legacy require-links setting; has no effect on link cleaning")
+@app_commands.describe(enabled="Legacy value to save; does not affect link cleaning")
 async def set_require_links(interaction: discord.Interaction, enabled: bool):
-    """Set whether to require links in messages before processing."""
+    """Save the legacy require-links setting for configuration compatibility."""
     if not is_admin(interaction):
         await interaction.response.send_message("❌ You need administrator permissions to use this command.", ephemeral=True)
         return
@@ -474,7 +483,8 @@ async def set_require_links(interaction: discord.Interaction, enabled: bool):
     load_config()
     
     await interaction.response.send_message(
-        f"✅ Require links has been {'enabled' if enabled else 'disabled'}.",
+        f"✅ Legacy require-links setting saved: {'enabled' if enabled else 'disabled'}. "
+        "This does not affect link cleaning.",
         ephemeral=True
     )
 
