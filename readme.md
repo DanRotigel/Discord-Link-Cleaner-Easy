@@ -2,17 +2,19 @@
 
 > **Before deploying:** Please review the [Privacy Policy](./PRIVACY.md) and [Disclaimer & Terms of Use](./DISCLAIMER.md). By deploying DLC-E, you acknowledge that you are responsible for your own Discord bot, hosting account, permissions, and use of the software.
 
-Discord Link Cleaner (DLC) is a Discord bot that removes common tracking parameters from links posted in your server.
+Discord Link Cleaner (DLC) is a Discord bot that removes common tracking parameters from links when you mention the bot.
 
 This fork focuses on making DLC easy to deploy for nontechnical Discord administrators. The recommended setup uses Railway, so you do not need to install Python, use Linux, or run commands in a terminal.
 
 ## What DLC Does
 
-When someone posts a tracked link, DLC:
-1. Detects known tracking parameters such as `utm_source`, `fbclid`, and `gclid`.
-2. Removes the tracking parameters.
-3. Deletes the original tracked message when appropriate.
-4. Reposts the message with the cleaned link.
+When someone mentions the bot, DLC:
+1. Looks for tracked URLs in that message.
+2. If none are found and the mention is in a reply, checks the message being replied to.
+3. Removes known tracking parameters such as `utm_source`, `fbclid`, and `gclid`.
+4. Replies to the invocation with `Here's your link!` followed by the cleaned URL(s).
+
+DLC never deletes or edits either message. Tracked links without a bot mention and clean links are ignored. If both messages contain tracked URLs, the invocation message takes priority.
 
 It works at the Discord server level, so members do not need a browser extension, custom Discord client, or mobile app.
 
@@ -67,7 +69,6 @@ Give the bot these permissions:
 - View Channels
 - Send Messages
 - Send Messages in Threads
-- Manage Messages
 - Read Message History
 
 Save the changes.
@@ -102,15 +103,16 @@ Return to the Discord Developer Portal.
 
 ### Step 6: Test DLC
 
-Post this link in a channel the bot can access:
+Mention the bot using Discord's mention picker and include this link in the same message, in a channel the bot can access:
 
 ```text
 https://example.com/?utm_source=discord&utm_campaign=dlc-test
 ```
 
-DLC should delete the original tracked message and repost:
+DLC should leave your message intact and reply:
 
 ```text
+Here's your link!
 https://example.com/
 ```
 
@@ -118,9 +120,11 @@ If that happens, DLC is working.
 
 ## Using DLC
 
-Once running, DLC automatically watches messages in channels where it has permission to operate.
+To clean a link, mention the bot and paste the tracked link in the same message. Alternatively, reply to a message containing a tracked link and mention the bot in your reply.
 
-When a message contains a recognized tracking parameter, DLC removes the tracker and reposts the cleaned message.
+DLC replies to your invocation with only the cleaned URL(s), leaving both messages intact. It checks your invocation first; a clean URL in the invocation does not prevent it from checking the referenced message. If the referenced message is unavailable or the bot cannot read it, DLC does nothing.
+
+Cleaned links are returned in one reply. If the complete response, including the heading and newlines, exceeds Discord's 2,000-character limit, DLC replies with "Holy crap, that URL is too long!" instead. It does not attach files, truncate URLs, or split the response across messages.
 
 ## Discord Commands
 
@@ -128,10 +132,10 @@ When a message contains a recognized tracking parameter, DLC removes the tracker
 Shows the current DLC settings.
 
 ### `/set_mention`
-Controls whether DLC mentions the original author when reposting a cleaned message.
+Retained for configuration compatibility. This legacy setting does not affect mention-triggered link replies, which do not mention the author.
 
 ### `/set_require_links`
-Controls the `require_links` setting. For normal use, leave this enabled.
+Retained for configuration compatibility. Mention-triggered replies always require a tracked URL in the invocation or referenced message, regardless of this setting.
 
 ### `/set_regex`
 Changes the pattern DLC uses to detect URLs. Most users should leave the default unchanged.
@@ -171,15 +175,19 @@ Check that:
 - **Message Content Intent** is enabled.
 - The bot has access to the channel.
 - The bot has the required permissions.
-- The URL contains a tracker DLC recognizes.
+- You mentioned the bot using Discord's mention picker.
+- The invocation or referenced message contains a tracker DLC recognizes.
+- For reply invocations, the bot can read the referenced message.
 
 ### Settings disappear after a restart
 Confirm:
 - `DATA_DIR=/data`
 - A persistent volume is mounted at `/data`
 
-### The bot cannot delete the original message
-Make sure the bot has **Manage Messages** permission in that channel.
+### The bot does not clean a link from a reply
+Mention the bot in the reply and confirm that the original message still exists and the bot has **Read Message History** permission in that channel.
+
+DLC does not require **Manage Messages** permission.
 
 ## Removing DLC
 

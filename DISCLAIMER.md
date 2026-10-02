@@ -58,11 +58,11 @@ Those services may change their pricing, APIs, permissions, policies, or availab
 
 ## 6. Bot permissions and message handling
 
-DLC-E requires permissions that allow it to read message content in authorized channels and, when configured, delete and repost messages.
+DLC-E requires permissions that allow it to read message content and history in authorized channels and send replies. It cleans links only when mentioned and does not delete or edit user messages.
 
 You are responsible for deciding where to grant those permissions and for informing or obtaining consent from server members when required by applicable rules or law.
 
-Because DLC-E may delete and repost messages, you should test it in your environment before deploying it broadly.
+You should test mention-triggered link cleaning in your environment before deploying it broadly.
 
 ## 7. Security
 

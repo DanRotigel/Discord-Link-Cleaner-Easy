@@ -27,25 +27,30 @@ class InstagramURLTests(unittest.TestCase):
                 "DISCORD_BOT_TOKEN": "test-placeholder", "DATA_DIR": directory,
             }), patch.object(commands.Bot, "run"), contextlib.redirect_stdout(io.StringIO()):
                 cls.app = runpy.run_path(str(Path(__file__).resolve().parents[1] / "main.py"))
+        cls.bot_user = SimpleNamespace(id=987654321)
+        cls.app["bot"]._connection.user = cls.bot_user
 
     def test_real_instagram_url(self):
         result = self.app["clean_url"](INSTAGRAM_URL)
         self.assertEqual(result["clean_url"], "https://www.instagram.com/p/DdjsB7vC-gS/")
         self.assertEqual(result["removed_trackers"], {"Google": ["utm_source"], "Meta": ["stkn"]})
 
-    def test_message_handler_reposts_exact_instagram_url(self):
+    def test_message_handler_replies_exact_instagram_url(self):
         self.assertEqual(self.app["extract_urls"](INSTAGRAM_URL), [INSTAGRAM_URL])
         async def check():
             reply = SimpleNamespace(edit=AsyncMock())
             message = SimpleNamespace(
                 author=SimpleNamespace(mention="@tester"), content=INSTAGRAM_URL,
-                reply=AsyncMock(return_value=reply), delete=AsyncMock(),
+                mentions=[self.bot_user], reference=None,
+                reply=AsyncMock(return_value=reply), delete=AsyncMock(), edit=AsyncMock(),
             )
             with patch.object(self.app["bot"], "process_commands", new_callable=AsyncMock):
                 await self.app["on_message"](message)
-            message.delete.assert_awaited_once()
-            content = reply.edit.call_args.kwargs["content"]
-            self.assertEqual(content, '@tester said "https://www.instagram.com/p/DdjsB7vC-gS/"')
+            message.delete.assert_not_awaited()
+            message.edit.assert_not_awaited()
+            content = message.reply.call_args.args[0]
+            self.assertEqual(content, "Here's your link!\nhttps://www.instagram.com/p/DdjsB7vC-gS/")
+            reply.edit.assert_not_awaited()
         asyncio.run(check())
 
     def test_padded_url_extraction_preserves_surrounding_punctuation(self):
@@ -54,7 +59,7 @@ class InstagramURLTests(unittest.TestCase):
                 self.assertEqual(self.app["extract_urls"]("Look: " + INSTAGRAM_URL + suffix),
                                  [INSTAGRAM_URL])
 
-    def test_padding_and_legitimate_query_values_in_reposts(self):
+    def test_padding_and_legitimate_query_values_in_replies(self):
         async def check():
             for padding in ("=", "==", "%3D%3D"):
                 with self.subTest(padding=padding):
@@ -63,13 +68,17 @@ class InstagramURLTests(unittest.TestCase):
                     message = SimpleNamespace(
                         author=SimpleNamespace(mention="@tester"),
                         content="Look: (" + url + ").",
-                        reply=AsyncMock(return_value=reply), delete=AsyncMock(),
+                        mentions=[self.bot_user], reference=None,
+                        reply=AsyncMock(return_value=reply), delete=AsyncMock(), edit=AsyncMock(),
                     )
                     with patch.object(self.app["bot"], "process_commands", new_callable=AsyncMock):
                         await self.app["on_message"](message)
-                    reply.edit.assert_awaited_once()
-                    self.assertEqual(reply.edit.call_args.kwargs["content"],
-                                     '@tester said "Look: (https://www.instagram.com/p/item/)."')
+                    message.reply.assert_awaited_once()
+                    self.assertEqual(message.reply.call_args.args[0],
+                                     "Here's your link!\nhttps://www.instagram.com/p/item/")
+                    message.delete.assert_not_awaited()
+                    message.edit.assert_not_awaited()
+                    reply.edit.assert_not_awaited()
         asyncio.run(check())
         url = "https://www.instagram.com/p/item/?stkn=x&keep=abc=="
         self.assertEqual(self.app["extract_urls"](url), [url])

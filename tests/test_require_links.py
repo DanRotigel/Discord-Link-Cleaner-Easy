@@ -20,13 +20,16 @@ class RequireLinksTests(unittest.TestCase):
                 "DISCORD_BOT_TOKEN": "test-placeholder", "DATA_DIR": directory,
             }), patch.object(commands.Bot, "run"), contextlib.redirect_stdout(io.StringIO()):
                 cls.app = runpy.run_path(str(Path(__file__).resolve().parents[1] / "main.py"))
+        cls.bot_user = SimpleNamespace(id=987654321)
+        cls.app["bot"]._connection.user = cls.bot_user
 
     def check_message(self, require_links, content, expected=None):
         async def check():
             reply = SimpleNamespace(edit=AsyncMock())
             message = SimpleNamespace(
                 author=SimpleNamespace(mention="<@123456789>", display_name="Tester"),
-                content=content, reply=AsyncMock(return_value=reply), delete=AsyncMock(),
+                content=content, mentions=[self.bot_user], reference=None,
+                reply=AsyncMock(return_value=reply), delete=AsyncMock(), edit=AsyncMock(),
             )
             handler = self.app["on_message"]
             with patch.dict(handler.__globals__, {"require_links": require_links}), \
@@ -38,16 +41,19 @@ class RequireLinksTests(unittest.TestCase):
                 message.delete.assert_not_awaited()
                 reply.edit.assert_not_awaited()
             else:
-                message.reply.assert_awaited_once_with(">>>")
-                message.delete.assert_awaited_once()
-                reply.edit.assert_awaited_once_with(content=expected)
+                message.reply.assert_awaited_once_with(
+                    expected, allowed_mentions=unittest.mock.ANY, mention_author=False,
+                )
+                message.delete.assert_not_awaited()
+                message.edit.assert_not_awaited()
+                reply.edit.assert_not_awaited()
         asyncio.run(check())
 
     def test_tracked_urls_are_cleaned_with_both_settings(self):
         for enabled in (True, False):
             with self.subTest(require_links=enabled):
                 self.check_message(enabled, "Look https://example.com/page?utm_source=test&keep=yes",
-                                   '<@123456789> said "Look https://example.com/page?keep=yes"')
+                                   "Here's your link!\nhttps://example.com/page?keep=yes")
 
     def test_no_url_messages_are_ignored_with_both_settings(self):
         for enabled in (True, False):
@@ -55,7 +61,7 @@ class RequireLinksTests(unittest.TestCase):
                 with self.subTest(require_links=enabled, content=content):
                     self.check_message(enabled, content)
 
-    def test_clean_urls_are_not_reposted_with_both_settings(self):
+    def test_clean_urls_are_ignored_with_both_settings(self):
         for enabled in (True, False):
             with self.subTest(require_links=enabled):
                 self.check_message(enabled, "Look https://example.com/page?keep=yes")

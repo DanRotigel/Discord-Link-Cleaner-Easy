@@ -31,6 +31,8 @@ class AmazonURLTests(unittest.TestCase):
                 "DISCORD_BOT_TOKEN": "test-placeholder", "DATA_DIR": directory,
             }), patch.object(commands.Bot, "run"), contextlib.redirect_stdout(io.StringIO()):
                 cls.app = runpy.run_path(str(Path(__file__).resolve().parents[1] / "main.py"))
+        cls.bot_user = SimpleNamespace(id=987654321)
+        cls.app["bot"]._connection.user = cls.bot_user
 
     def test_real_amazon_url(self):
         result = self.app["clean_url"](AMAZON_URL)
@@ -88,19 +90,23 @@ class AmazonURLTests(unittest.TestCase):
                 self.assertTrue(self.app["has_trackers"](url))
                 self.assertEqual(self.app["clean_url"](url)["clean_url"], f"{prefix}/dp/item")
 
-    def test_message_handler_reposts_real_amazon_url(self):
+    def test_message_handler_replies_real_amazon_url(self):
         async def check():
             reply = SimpleNamespace(edit=AsyncMock())
             message = SimpleNamespace(
                 author=SimpleNamespace(mention="@tester"), content=AMAZON_URL,
-                reply=AsyncMock(return_value=reply), delete=AsyncMock(),
+                mentions=[self.bot_user], reference=None,
+                reply=AsyncMock(return_value=reply), delete=AsyncMock(), edit=AsyncMock(),
             )
             with patch.object(self.app["bot"], "process_commands", new_callable=AsyncMock):
                 await self.app["on_message"](message)
-            message.delete.assert_awaited_once()
-            reply.edit.assert_awaited_once_with(content=(
-                '@tester said "https://www.amazon.com/dp/B0HJBCX8VS/"'
-            ))
+            message.delete.assert_not_awaited()
+            message.edit.assert_not_awaited()
+            message.reply.assert_awaited_once_with(
+                "Here's your link!\nhttps://www.amazon.com/dp/B0HJBCX8VS/",
+                allowed_mentions=unittest.mock.ANY, mention_author=False,
+            )
+            reply.edit.assert_not_awaited()
         asyncio.run(check())
 
 
