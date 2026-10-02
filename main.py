@@ -404,7 +404,8 @@ async def on_message(message):
                 "allowed_mentions": discord.AllowedMentions.none(),
                 "mention_author": False,
             }
-            content = "Here's your link!\n" + "\n".join(links)
+            heading = "Here's your link!" if len(links) == 1 else "Here are your links!"
+            content = heading + "\n" + "\n".join(links)
             if len(content) > 2000:
                 content = "Holy crap, that URL is too long!"
             await message.reply(content, **reply_options)

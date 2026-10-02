@@ -56,7 +56,8 @@ class MentionCleaningTests(unittest.IsolatedAsyncioTestCase):
         else:
             invocation.reply.assert_awaited_once()
             args, kwargs = invocation.reply.call_args
-            self.assertEqual(args, ("Here's your link!\n" + expected,))
+            heading = "Here are your links!" if "\n" in expected else "Here's your link!"
+            self.assertEqual(args, (heading + "\n" + expected,))
             self.assertFalse(kwargs["mention_author"])
             self.assertEqual(kwargs["allowed_mentions"].to_dict(), discord.AllowedMentions.none().to_dict())
         invocation.delete.assert_not_awaited()
@@ -166,14 +167,14 @@ class MentionCleaningTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_response_exactly_2000_characters_stays_in_one_reply(self):
         links = [self.url_of_length(900),
-                 self.url_of_length(2000 - len("Here's your link!\n") - 901)]
-        expected = "Here's your link!\n" + "\n".join(links)
+                 self.url_of_length(2000 - len("Here are your links!\n") - 901)]
+        expected = "Here are your links!\n" + "\n".join(links)
         self.assertEqual(len(expected), 2000)
         await self.check_long_reply(links, [expected])
 
     async def test_response_2001_characters_returns_length_warning(self):
         links = [self.url_of_length(900),
-                 self.url_of_length(2001 - len("Here's your link!\n") - 901)]
+                 self.url_of_length(2001 - len("Here are your links!\n") - 901)]
         await self.check_long_reply(links, ["Holy crap, that URL is too long!"])
 
     async def test_multiple_overflows_return_one_warning(self):

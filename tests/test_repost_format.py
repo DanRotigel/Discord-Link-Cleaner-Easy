@@ -58,7 +58,7 @@ class ReplyFormatTests(unittest.TestCase):
 
     def test_returns_only_cleaned_links_from_surrounding_text(self):
         text = '  before\t"quoted"\n' + URL + '   between  ' + URL + '\n after  '
-        self.assert_reply(text, f"Here's your link!\n{CLEAN_URL}\n{CLEAN_URL}", True)
+        self.assert_reply(text, f"Here are your links!\n{CLEAN_URL}\n{CLEAN_URL}", True)
 
 
 if __name__ == "__main__":
